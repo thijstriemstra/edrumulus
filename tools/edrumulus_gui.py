@@ -50,12 +50,14 @@ elif use_webui:
 # tables
 pad_types_dict = {"PDA120LS Roland Mesh Pad":18, "PDX100 Roland Mesh Pad":19, "PD120 Roland Mesh Pad":0, \
                     "PD85 Roland Mesh Pad":1, "PDX8 Roland Mesh Pad":15, "DIABOLO12 drum-tec Mesh Pad":10, \
+                    "MPS-750X Millenium Mesh Tom":21, "MPS-750X Millenium Mesh Snare":22, \
                   "PD8 Roland Rubber Pad":2, "PD6 Roland Rubber Pad":13, "PD5 Roland Rubber Pad":17, \
                     "HD1TOM Roland Rubber Pad":12, "TP80 Yamaha Rubber Pad":7, \
                   "CY8 Roland Cymbal":9, "CY6 Roland Cymbal":8, "CY5 Roland Cymbal":11, "VH12 Roland Cymbal":4, \
+                    "MPS-750X Millenium Ride":24, "MPS-750X Millenium Crash":25, "LEHHS12C Lemon Hi-Hat Cymbal":26, \
                   "KD120 Roland Mesh Kick Pad":16, "KD8 Roland Kick Pad":14, \
-                    "KD7 Roland Kick Pad":6, "KT10 Roland Kick Pedal":20, \
-                  "FD8 Roland Hi-Hat Pedal":3, "VH12CTRL Roland Hi-Hat Pedal":5}
+                    "KD7 Roland Kick Pad":6, "KT10 Roland Kick Pedal":20, "MPS-750X Millenium Kick Pad":23, \
+                  "FD8 Roland Hi-Hat Pedal":3, "VH12CTRL Roland Hi-Hat Pedal":5, "LEHHS12CCTRL Lemon Hi-Hat Pedal":27}
 pad_names    = ["snare", "kick", "hi-hat", "ctrl", "crash", "tom1", "ride", "tom2", "tom3"]
 curve_types  = ["LINEAR", "EXP1", "EXP2", "LOG1", "LOG2"]
 cmd_names    = [                 "type", "thresh", "sens", "pos thres", "pos sens", "rim thres", "mask",              "curve"]
@@ -487,24 +489,20 @@ def ecasound_switch_chains(do_increment):
     chain_index = chain_index % len(chain_setups)
     selected_kit = chain_setups[chain_index]
     ecasound_socket.sendall("engine-halt\r\ncs-select {0}\r\ncs-connect {0}\r\nengine-launch\r\nstart\r\n".format(selected_kit).encode("utf8"))
-    ecasound_socket.recv(4096) # clear input buffer
-    kit_vol_str = "" # invalidate on new kit
+    ecasound_apply_kit_volume()
 
 def ecasound_kit_volume(do_increment):
   global kit_volume, kit_vol_str
   if ecasound_connect_try_cnt == 0:
-    # first, query current volume value
-    ecasound_socket.sendall("c-select Master\r\ncop-get 1,1\r\n".encode("utf8"))
-    data = ecasound_socket.recv(4096)
-    for substr in str(data).split("\\r\\n"):
-      if "." in substr:
-        kit_volume = int(float(substr))
     # now modify and apply new volume value
     kit_volume = kit_volume + 1 if do_increment else kit_volume - 1
     kit_volume = max(min(kit_volume, 30), -30)
-    ecasound_socket.sendall("c-select Master\r\ncop-set 1,1,{0}\r\n".format(kit_volume).encode("utf8"))
-    ecasound_socket.recv(4096) # clear input buffer
-    kit_vol_str = str(kit_volume) + " dB"
+    ecasound_apply_kit_volume()
+
+def ecasound_apply_kit_volume():
+  global kit_vol_str
+  ecasound_socket.sendall("c-select Master\r\ncop-set 1,1,{0}\r\n".format(kit_volume).encode("utf8"))
+  kit_vol_str = str(kit_volume) + " dB"
 
 
 ################################################################################
